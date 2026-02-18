@@ -9,8 +9,10 @@ class QdrantManager:
     def __init__(self):
         """Initialize Qdrant client and create collection if needed"""
         try:
-            self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
-            logger.info(f"Connected to Qdrant at {settings.QDRANT_HOST}:{settings.QDRANT_PORT}")
+            # Connect using URL format like the reference
+            qdrant_url = f"http://{settings.QDRANT_HOST}:{settings.QDRANT_PORT}"
+            self.client = QdrantClient(url=qdrant_url)
+            logger.info(f"Connected to Qdrant at {qdrant_url}")
         except Exception as e:
             logger.error(f"Failed to connect to Qdrant: {e}")
             raise
@@ -18,17 +20,16 @@ class QdrantManager:
     def create_collection(self, vector_size: int):
         """Create a collection if it doesn't exist"""
         try:
-            collections = self.client.get_collections().collections
-            collection_names = [col.name for col in collections]
-            
-            if settings.QDRANT_COLLECTION_NAME not in collection_names:
+            # Check if collection exists using collection_exists method
+            if not self.client.collection_exists(settings.QDRANT_COLLECTION_NAME):
+                logger.warning(f"Collection '{settings.QDRANT_COLLECTION_NAME}' doesn't exist. Creating it...")
                 self.client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION_NAME,
                     vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
                 )
-                logger.info(f"Created collection: {settings.QDRANT_COLLECTION_NAME}")
+                logger.info(f"Collection '{settings.QDRANT_COLLECTION_NAME}' created successfully.")
             else:
-                logger.info(f"Collection {settings.QDRANT_COLLECTION_NAME} already exists")
+                logger.info(f"Using existing collection: {settings.QDRANT_COLLECTION_NAME}")
         except Exception as e:
             logger.error(f"Error creating collection: {e}")
             raise
@@ -45,6 +46,7 @@ class QdrantManager:
                         vector=embedding,
                         payload={
                             "text": text,
+                            "chunk_id": idx,
                             **meta
                         }
                     )
@@ -54,7 +56,7 @@ class QdrantManager:
                 collection_name=settings.QDRANT_COLLECTION_NAME,
                 points=points
             )
-            logger.info(f"Added {len(points)} documents to Qdrant")
+            logger.info(f"Successfully uploaded {len(points)} document chunks to Qdrant collection '{settings.QDRANT_COLLECTION_NAME}'")
             return len(points)
         except Exception as e:
             logger.error(f"Error adding documents: {e}")

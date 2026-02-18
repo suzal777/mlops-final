@@ -36,10 +36,24 @@ docker-compose up -d --build
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to start..."
-sleep 10
+sleep 15
+
+# Pull Ollama model
+echo "🦙 Pulling Ollama model (qwen2.5:0.5b)..."
+docker-compose exec -T ollama ollama pull qwen2.5:0.5b
+
+# Wait a bit more for everything to settle
+sleep 5
 
 # Check service health
 echo "🏥 Checking service health..."
+
+# Check Ollama
+if curl -s http://localhost:11434/api/tags > /dev/null; then
+    echo "✅ Ollama is running"
+else
+    echo "❌ Ollama is not responding"
+fi
 
 # Check Qdrant
 if curl -s http://localhost:6333/health > /dev/null; then
@@ -70,6 +84,7 @@ echo "   Frontend UI: http://localhost:8501"
 echo "   Backend API: http://localhost:8000"
 echo "   API Docs: http://localhost:8000/docs"
 echo "   Qdrant Dashboard: http://localhost:6333/dashboard"
+echo "   Ollama API: http://localhost:11434"
 echo ""
 echo "📊 View logs with: docker-compose logs -f"
 echo "🛑 Stop services with: docker-compose down"

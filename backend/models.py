@@ -1,16 +1,46 @@
-from sentence_transformers import SentenceTransformer
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.chat_models import ChatOllama
 import torch
 from logger_config import logger
 from config import settings
 
 class EmbeddingModel:
     def __init__(self):
-        """Initialize the embedding model"""
+        """Initialize the embedding model using HuggingFace"""
         try:
             logger.info(f"Loading embedding model: {settings.EMBEDDING_MODEL_NAME}")
-            self.model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-            self.dimension = self.model.get_sentence_embedding_dimension()
+            
+            # Determine device
+            device = "cpu"
+            if torch.cuda.is_available():
+                try:
+                    # Try to allocate a small tensor to test if CUDA actually works
+                    test_tensor = torch.tensor([1.0]).cuda()
+                    del test_tensor
+                    torch.cuda.empty_cache()
+                    device = "cuda"
+                    logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+                    logger.info(
+                        f"GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB"
+                    )
+                except Exception as e:
+                    logger.warning(f"CUDA error: {e}. Falling back to CPU")
+                    device = "cpu"
+            else:
+                logger.info("CUDA not available, using CPU")
+            
+            logger.info(f"Initializing embeddings with model: {settings.EMBEDDING_MODEL_NAME} on device: {device}")
+            
+            # Initialize HuggingFace embeddings
+            self.model = HuggingFaceEmbeddings(
+                model_name=settings.EMBEDDING_MODEL_NAME,
+                model_kwargs={"device": device}
+            )
+            
+            # Get embedding dimension by encoding a test string
+            test_embedding = self.model.embed_query("test")
+            self.dimension = len(test_embedding)
+            
             logger.info(f"Embedding model loaded. Dimension: {self.dimension}")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
@@ -19,61 +49,53 @@ class EmbeddingModel:
     def encode(self, texts):
         """Generate embeddings for texts"""
         try:
-            embeddings = self.model.encode(texts, convert_to_numpy=True)
-            return embeddings.tolist() if len(texts) > 1 else [embeddings.tolist()]
+            if isinstance(texts, str):
+                texts = [texts]
+            
+            # Use embed_documents for batch encoding
+            if len(texts) > 1:
+                embeddings = self.model.embed_documents(texts)
+            else:
+                embeddings = [self.model.embed_query(texts[0])]
+            
+            return embeddings
         except Exception as e:
             logger.error(f"Error encoding texts: {e}")
             raise
 
 class LLMModel:
     def __init__(self):
-        """Initialize the LLM model"""
+        """Initialize the LLM model using Ollama"""
         try:
-            logger.info(f"Loading LLM model: {settings.LLM_MODEL_NAME}")
-            self.tokenizer = AutoTokenizer.from_pretrained(settings.LLM_MODEL_NAME)
-            self.model = AutoModelForCausalLM.from_pretrained(
-                settings.LLM_MODEL_NAME,
-                torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                device_map="auto" if torch.cuda.is_available() else None
+            logger.info(f"Initializing LLM: {settings.LLM_MODEL} (temp={settings.LLM_TEMPERATURE})")
+            self.llm = ChatOllama(
+                model=settings.LLM_MODEL,
+                temperature=settings.LLM_TEMPERATURE,
+                base_url=settings.OLLAMA_BASE_URL,
             )
-            logger.info("LLM model loaded successfully")
+            logger.info("LLM model initialized successfully with Ollama")
         except Exception as e:
-            logger.error(f"Failed to load LLM model: {e}")
+            logger.error(f"Failed to initialize LLM model: {e}")
             raise
     
     def generate(self, prompt: str, max_length: int = 512) -> str:
         """Generate response from the model"""
         try:
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided context."},
-                {"role": "user", "content": prompt}
-            ]
+            logger.info("Generating response with Ollama...")
             
-            text = self.tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True
-            )
+            # Stream the response from Ollama
+            response = self.llm.stream(prompt)
             
-            inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
+            logger.info("LLM response received, processing stream...")
             
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=max_length,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9
-            )
+            # Collect the streamed response
+            response_content = ""
+            for chunk in response:
+                if hasattr(chunk, "content") and isinstance(chunk.content, str):
+                    response_content += chunk.content
             
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            # Extract only the assistant's response
-            if "<|im_start|>assistant" in response:
-                response = response.split("<|im_start|>assistant")[-1]
-            if "<|im_end|>" in response:
-                response = response.split("<|im_end|>")[0]
-            
-            return response.strip()
+            logger.info(f"Generated response of length: {len(response_content)}")
+            return response_content.strip()
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             raise

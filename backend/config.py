@@ -2,8 +2,12 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    # Model settings
-    LLM_MODEL_NAME: str = "Qwen/Qwen2.5-0.5B-Instruct"
+    # LLM settings (Ollama)
+    LLM_MODEL: str = "qwen2.5:0.5b"  # Ollama model name
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    LLM_TEMPERATURE: float = 0.7
+    
+    # Embedding settings (HuggingFace)
     EMBEDDING_MODEL_NAME: str = "BAAI/bge-small-en-v1.5"
     
     # Qdrant settings

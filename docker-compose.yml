@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
   qdrant:
     image: qdrant/qdrant:latest
     ports:
@@ -11,23 +19,29 @@ services:
     restart: unless-stopped
 
   backend:
-    image: suzal777/rag-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     depends_on:
       - qdrant
+      - ollama
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
     restart: unless-stopped
 
   frontend:
-    image: suzal777/rag-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "80:8501"
+      - "8501:8501"
     depends_on:
       - backend
     environment:
@@ -36,3 +50,4 @@ services:
 
 volumes:
   qdrant_storage:
+  ollama_data:
