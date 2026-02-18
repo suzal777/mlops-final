@@ -240,11 +240,3 @@ sudo kill -9 <PID>
 2. Create a feature branch
 3. Make your changes
 4. Submit a pull request
-
-## �� License
-
-MIT License
-
-## 👥 Authors
-
-Your Name - MLOps Assignment 2026
