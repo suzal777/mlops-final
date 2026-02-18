@@ -4,7 +4,7 @@ python-multipart==0.0.6
 langchain==0.1.6
 langchain-community==0.0.20
 langchain-huggingface==0.0.1
-sentence-transformers==2.3.1
+sentence-transformers>=2.6.0
 qdrant-client==1.7.3
 pypdf==4.0.1
 torch==2.1.2
