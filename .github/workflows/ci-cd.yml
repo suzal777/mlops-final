@@ -1,0 +1,78 @@
+name: CI/CD Pipeline for RAG Microservice
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          flake8 backend --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Check code formatting
+        run: |
+          pip install black
+          black --check backend
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          pip install -r requirements.txt
+
+  deploy-ec2:
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to EC2
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          
+          # Copy files to EC2
+          scp -i private_key.pem -o StrictHostKeyChecking=no -r backend frontend $EC2_USER@$EC2_HOST:/home/$EC2_USER/mlops_final/
+          
+          # Deploy on EC2
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'ENDSSH'
+            cd /home/$EC2_USER/mlops_final
+            
+            # Install dependencies and restart services
+            docker-compose down
+            docker-compose up -d --build
+          ENDSSH
+          
+          rm -f private_key.pem
