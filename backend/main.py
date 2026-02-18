@@ -153,7 +153,7 @@ Answer:"""
         logger.info("Generating response...")
         answer = llm_model.generate(prompt, max_length=request.max_length)
         
-        # Prepare sources
+        # Prepare sources         
         sources = [
             {
                 "text": doc["text"][:200] + "...",
