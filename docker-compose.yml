@@ -19,7 +19,9 @@ services:
     restart: unless-stopped
 
   backend:
-    image: suzal777/rag-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     depends_on:
@@ -35,7 +37,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: suzal777/rag-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "80:8501"
     depends_on:
