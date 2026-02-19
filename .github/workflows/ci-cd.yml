@@ -75,5 +75,6 @@ jobs:
           # Pull latest images
           docker compose pull
           
-          # Restart services safely
-          docker compose up -d --remove-orphans
+          export DOCKER_BUILDKIT=1
+          docker compose build --progress=plain
+          docker compose up -d

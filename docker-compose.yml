@@ -20,6 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: final  # Make sure your Dockerfile has a stage named 'final' or remove this line if single-stage
     ports:
       - "8000:8000"
     depends_on:
@@ -38,8 +39,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: final  # Make sure your Dockerfile has a stage named 'final' or remove if single-stage
     ports:
-      - "8501:8501"
+      - "80:8501"  # Updated to expose frontend on port 80 externally
     depends_on:
       - backend
     environment:
