@@ -35,7 +35,7 @@ services:
   frontend:
     image: suzal777/rag-frontend:latest  # use your DockerHub image
     ports:
-      - "8501:8501"
+      - "80:8501"
     depends_on:
       - backend
     environment:
