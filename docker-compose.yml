@@ -17,9 +17,7 @@ services:
     restart: unless-stopped
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: suzal777/rag-backend:latest  # use your DockerHub image
     ports:
       - "8000:8000"
     depends_on:
@@ -35,11 +33,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: suzal777/rag-frontend:latest  # use your DockerHub image
     ports:
-      - "80:8501"  # Updated to expose frontend on port 80 externally
+      - "8501:8501"
     depends_on:
       - backend
     environment:
