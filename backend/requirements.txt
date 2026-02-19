@@ -7,7 +7,7 @@ langchain-huggingface>=0.0.1
 sentence-transformers>=2.6.0
 qdrant-client>=1.7.0
 pypdf>=3.0.0
-torch==2.1.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2
 accelerate>=0.20.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
