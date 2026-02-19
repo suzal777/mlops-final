@@ -72,8 +72,5 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           
-          # Pull latest images
-          docker compose pull
-          
-          # Restart services safely
-          docker compose up -d --remove-orphans
+          DOCKER_BUILDKIT=0 docker compose pull
+          DOCKER_BUILDKIT=0 docker compose up -d --remove-orphans
